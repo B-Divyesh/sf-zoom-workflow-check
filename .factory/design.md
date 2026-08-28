@@ -67,7 +67,8 @@ layering, so depth does not depend on motion.
   coarse halftone grain, torn-paper collage edges, crop marks, wide composition,
   no words, no logos, no gradients, no photorealism.” Original work under the
   project MIT license; generator metadata is stored beside the source artifact.
-- Tiny focus-path and status marks are hand-authored CSS shapes, not stock icons.
+- `site/public/focus-mark.svg` and the tiny focus-path/status marks are
+  hand-authored geometric SVG/CSS, not stock icons.
 
 The generated image clarifies the core idea—magnification exposing a blocked
 keyboard path—and is the only raster illustration. Report thumbnails are user
