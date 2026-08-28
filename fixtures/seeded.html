@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Zoomcheck seeded controls</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 24px; font: 18px/1.5 system-ui, sans-serif; }
+      main { width: min(90%, 720px); margin: auto; }
+      button { display: block; width: 200px; height: 48px; margin: 18px 0; border: 2px solid #111; background: #fff; color: #111; }
+      button:focus { outline: 4px solid #095d9a; outline-offset: 3px; }
+      .clipped { width: 72px; height: 58px; overflow: hidden; margin: 18px 0; border: 1px dashed #777; }
+      .clipped button { margin: 4px 0; transform: translateX(90px); }
+      .covered { position: relative; width: 220px; height: 66px; margin: 18px 0; }
+      .covered button { margin: 0; }
+      .cover { position: absolute; z-index: 2; inset: 0; background: rgba(90, 20, 20, .92); pointer-events: auto; }
+    </style>
+  </head>
+  <body tabindex="-1">
+    <main>
+      <h1>Seeded keyboard path</h1>
+      <p>Ten operable controls followed by ten controls with known clipping or obstruction.</p>
+      <section aria-label="Known good controls">
+        <button id="good-1">Good control 1</button><button id="good-2">Good control 2</button>
+        <button id="good-3">Good control 3</button><button id="good-4">Good control 4</button>
+        <button id="good-5">Good control 5</button><button id="good-6">Good control 6</button>
+        <button id="good-7">Good control 7</button><button id="good-8">Good control 8</button>
+        <button id="good-9">Good control 9</button><button id="good-10">Good control 10</button>
+      </section>
+      <section aria-label="Known failed controls">
+        <div class="clipped"><button id="bad-1">Clipped 1</button></div>
+        <div class="clipped"><button id="bad-2">Clipped 2</button></div>
+        <div class="clipped"><button id="bad-3">Clipped 3</button></div>
+        <div class="clipped"><button id="bad-4">Clipped 4</button></div>
+        <div class="clipped"><button id="bad-5">Clipped 5</button></div>
+        <div class="covered"><button id="bad-6">Covered 6</button><span class="cover" aria-hidden="true"></span></div>
+        <div class="covered"><button id="bad-7">Covered 7</button><span class="cover" aria-hidden="true"></span></div>
+        <div class="covered"><button id="bad-8">Covered 8</button><span class="cover" aria-hidden="true"></span></div>
+        <div class="covered"><button id="bad-9">Covered 9</button><span class="cover" aria-hidden="true"></span></div>
+        <div class="covered"><button id="bad-10">Covered 10</button><span class="cover" aria-hidden="true"></span></div>
+      </section>
+    </main>
+  </body>
+</html>

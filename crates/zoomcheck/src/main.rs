@@ -110,8 +110,13 @@ fn execute(cli: Cli) -> Result<u8> {
             if zoom.is_empty() {
                 anyhow::bail!("provide at least one --zoom value");
             }
-            if zoom.iter().any(|z| !(125..=500).contains(z)) {
-                anyhow::bail!("zoom must be between 125 and 500 percent");
+            if zoom
+                .iter()
+                .any(|z| ![100, 110, 125, 150, 175, 200, 250, 300, 400].contains(z))
+            {
+                anyhow::bail!(
+                    "zoom must be a Chromium level: 100, 110, 125, 150, 175, 200, 250, 300, or 400"
+                );
             }
             fs::create_dir_all(&out)?;
             let browser_path = browser::find_browser(browser.as_deref())?;

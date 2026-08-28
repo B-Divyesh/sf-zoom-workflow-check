@@ -1,7 +1,11 @@
 use anyhow::{Context, Result, bail};
 use headless_chrome::{
-    Browser, LaunchOptions, browser::tab::ModifierKey,
-    protocol::cdp::Page::CaptureScreenshotFormatOption,
+    Browser, LaunchOptions,
+    browser::tab::ModifierKey,
+    protocol::cdp::{
+        Emulation::SetDeviceMetricsOverride,
+        Page::{AddScriptToEvaluateOnNewDocument, CaptureScreenshotFormatOption},
+    },
 };
 use serde::Deserialize;
 use std::{
@@ -9,6 +13,10 @@ use std::{
     ffi::OsStr,
     fs,
     path::{Path, PathBuf},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
     thread,
     time::{Duration, Instant},
 };
@@ -68,18 +76,8 @@ fn find_playwright_chrome(root: &Path) -> Option<PathBuf> {
     None
 }
 
-fn launch(path: &Path, headless: bool, zoom: Option<u16>) -> Result<(TempDir, Browser)> {
+fn launch(path: &Path, headless: bool) -> Result<(TempDir, Browser)> {
     let profile = tempfile::tempdir().context("create temporary browser profile")?;
-    fs::create_dir_all(profile.path().join("Default"))?;
-    if let Some(percent) = zoom {
-        let level =
-            ((percent as f64 / 100.0).ln() / 1.2_f64.ln() * 1_000_000.0).round() / 1_000_000.0;
-        let prefs = serde_json::json!({"partition":{"default_zoom_level": level},"browser":{"check_default_browser":false}});
-        fs::write(
-            profile.path().join("Default/Preferences"),
-            serde_json::to_vec(&prefs)?,
-        )?;
-    }
     let flags = [
         OsStr::new("--disable-search-engine-choice-screen"),
         OsStr::new("--no-first-run"),
@@ -105,11 +103,47 @@ pub fn record(
     browser_path: &Path,
     timeout: Duration,
 ) -> Result<()> {
-    let (_profile, browser) = launch(browser_path, false, None)
+    let (_profile, browser) = launch(browser_path, false)
         .context("open recording browser (is a desktop display available?)")?;
     let tab = browser.new_tab()?;
+    let recorded = Arc::new(Mutex::new(Vec::<Step>::new()));
+    let finished = Arc::new(AtomicBool::new(false));
+    let recorded_for_browser = Arc::clone(&recorded);
+    let finished_for_browser = Arc::clone(&finished);
+    tab.expose_function(
+        "__zoomcheckSend",
+        Arc::new(move |payload: serde_json::Value| {
+            let Some(payload) = payload.as_str() else {
+                return;
+            };
+            let Ok(envelope) = serde_json::from_str::<serde_json::Value>(payload) else {
+                return;
+            };
+            let Some(message) = envelope["args"].get(0).and_then(|value| value.as_str()) else {
+                return;
+            };
+            let Ok(message) = serde_json::from_str::<serde_json::Value>(message) else {
+                return;
+            };
+            match message["type"].as_str() {
+                Some("done") => finished_for_browser.store(true, Ordering::SeqCst),
+                Some("step") => {
+                    if let Ok(step) = serde_json::from_value::<Step>(message["step"].clone()) {
+                        recorded_for_browser.lock().unwrap().push(step);
+                    }
+                }
+                _ => {}
+            }
+        }),
+    )?;
+    tab.call_method(AddScriptToEvaluateOnNewDocument {
+        source: RECORDER_JS.into(),
+        world_name: None,
+        include_command_line_api: None,
+        run_immediately: None,
+    })?;
     tab.navigate_to(url)?.wait_until_navigated()?;
-    tab.evaluate(RECORDER_JS, false)?;
+    ensure_page_loaded(&tab, url)?;
     eprintln!("Recording {name:?}. Use the page with the keyboard; press Alt+Shift+S to save.");
     let started = Instant::now();
     loop {
@@ -119,34 +153,24 @@ pub fn record(
                 timeout.as_secs()
             );
         }
-        if let Ok(value) =
-            eval_value::<RecorderState>(&tab, "JSON.stringify(window.__zoomcheck || null)")
-        {
-            if value.done {
-                let workflow = Workflow {
-                    version: 1,
-                    name: name.into(),
-                    url: url.into(),
-                    settle_ms: 180,
-                    steps: value.steps,
-                };
-                workflow.validate()?;
-                if let Some(parent) = out.parent() {
-                    fs::create_dir_all(parent)?;
-                }
-                fs::write(out, serde_json::to_vec_pretty(&workflow)?)?;
-                eprintln!("Saved {} steps to {}", workflow.steps.len(), out.display());
-                return Ok(());
+        if finished.load(Ordering::SeqCst) {
+            let workflow = Workflow {
+                version: 1,
+                name: name.into(),
+                url: url.into(),
+                settle_ms: 180,
+                steps: recorded.lock().unwrap().clone(),
+            };
+            workflow.validate()?;
+            if let Some(parent) = out.parent() {
+                fs::create_dir_all(parent)?;
             }
+            fs::write(out, serde_json::to_vec_pretty(&workflow)?)?;
+            eprintln!("Saved {} steps to {}", workflow.steps.len(), out.display());
+            return Ok(());
         }
         thread::sleep(Duration::from_millis(120));
     }
-}
-
-#[derive(Deserialize)]
-struct RecorderState {
-    done: bool,
-    steps: Vec<Step>,
 }
 
 pub fn run_zoom(
@@ -156,9 +180,11 @@ pub fn run_zoom(
     browser_path: &Path,
     headless: bool,
 ) -> Result<ZoomRun> {
-    let (_profile, browser) = launch(browser_path, headless, Some(zoom))?;
+    let (_profile, browser) = launch(browser_path, headless)?;
     let tab = browser.new_tab()?;
     tab.navigate_to(&workflow.url)?.wait_until_navigated()?;
+    ensure_page_loaded(&tab, &workflow.url)?;
+    apply_browser_zoom(&tab, zoom)?;
     thread::sleep(Duration::from_millis(workflow.settle_ms));
     tab.evaluate(
         "document.body && document.body.focus(); window.scrollTo(0,0)",
@@ -182,13 +208,19 @@ pub fn run_zoom(
     fs::write(out.join(&screenshot_name), png)?;
     let failures = results
         .iter()
-        .flat_map(|s| &s.findings)
-        .filter(|f| f.severity == Severity::Failure)
+        .filter(|step| {
+            step.findings
+                .iter()
+                .any(|finding| finding.severity == Severity::Failure)
+        })
         .count();
     let warnings = results
         .iter()
-        .flat_map(|s| &s.findings)
-        .filter(|f| f.severity == Severity::Warning)
+        .filter(|step| {
+            step.findings
+                .iter()
+                .any(|finding| finding.severity == Severity::Warning)
+        })
         .count();
     Ok(ZoomRun {
         zoom,
@@ -201,6 +233,35 @@ pub fn run_zoom(
         failures,
         warnings,
     })
+}
+
+fn ensure_page_loaded(tab: &std::sync::Arc<headless_chrome::Tab>, requested: &str) -> Result<()> {
+    let current = tab.get_url();
+    if current.starts_with("chrome-error://") {
+        bail!("could not load {requested}; check the URL, server, and network connection");
+    }
+    Ok(())
+}
+
+fn apply_browser_zoom(tab: &std::sync::Arc<headless_chrome::Tab>, zoom: u16) -> Result<()> {
+    let factor = zoom as f64 / 100.0;
+    tab.call_method(SetDeviceMetricsOverride {
+        width: (1280.0 / factor).round() as u32,
+        height: (900.0 / factor).round() as u32,
+        device_scale_factor: factor,
+        mobile: false,
+        scale: Some(1.0),
+        screen_width: Some(1280),
+        screen_height: Some(900),
+        position_x: None,
+        position_y: None,
+        dont_set_visible_size: None,
+        screen_orientation: None,
+        viewport: None,
+        display_feature: None,
+        device_posture: None,
+    })?;
+    Ok(())
 }
 
 fn press(tab: &std::sync::Arc<headless_chrome::Tab>, key: &str) -> Result<()> {
@@ -341,7 +402,7 @@ fn warning(kind: FindingKind, message: &str) -> Finding {
     }
 }
 
-const RECORDER_JS: &str = r#"(()=>{if(window.__zoomcheck)return true;const selector=e=>{if(!e||e===document.body)return'e-body';if(e.id)return'#'+CSS.escape(e.id);for(const a of ['data-testid','name','aria-label'])if(e.hasAttribute(a))return e.tagName.toLowerCase()+'['+a+'="'+CSS.escape(e.getAttribute(a))+'"]';let s=e.tagName.toLowerCase();const p=e.parentElement;if(p){const same=[...p.children].filter(x=>x.tagName===e.tagName);if(same.length>1)s+=`:nth-of-type(${same.indexOf(e)+1})`;}return s};window.__zoomcheck={done:false,steps:[]};const allowed=new Set(['Tab','Enter',' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Escape','Home','End']);addEventListener('keydown',e=>{if(e.altKey&&e.shiftKey&&e.code==='KeyS'){e.preventDefault();window.__zoomcheck.done=true;document.querySelector('#__zwc_hint')?.remove();return}if(e.ctrlKey||e.metaKey||e.altKey||!allowed.has(e.key))return;const key=e.key===' '?'Space':(e.key==='Tab'&&e.shiftKey?'Shift+Tab':e.key);const item={key};window.__zoomcheck.steps.push(item);setTimeout(()=>{item.expect=selector(document.activeElement)},0)},true);const d=document.createElement('div');d.id='__zwc_hint';d.setAttribute('role','status');d.textContent='ZOOM CHECK · recording keys · Alt+Shift+S to save';Object.assign(d.style,{position:'fixed',zIndex:2147483647,right:'12px',bottom:'12px',padding:'12px 16px',background:'#18221d',color:'#fff9ec',font:'700 14px monospace',border:'3px solid #f2c94c',pointerEvents:'none'});document.documentElement.append(d);return true})()"#;
+const RECORDER_JS: &str = r#"(()=>{const selector=e=>{if(!e||e===document.body)return'e-body';if(e.id)return'#'+CSS.escape(e.id);for(const a of ['data-testid','name','aria-label'])if(e.hasAttribute(a))return e.tagName.toLowerCase()+'['+a+'="'+CSS.escape(e.getAttribute(a))+'"]';let s=e.tagName.toLowerCase();const p=e.parentElement;if(p){const same=[...p.children].filter(x=>x.tagName===e.tagName);if(same.length>1)s+=`:nth-of-type(${same.indexOf(e)+1})`;}return s};const allowed=new Set(['Tab','Enter',' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Escape','Home','End']);addEventListener('keyup',e=>{if(e.altKey&&e.shiftKey&&e.code==='KeyS'){e.preventDefault();window.__zoomcheckSend(JSON.stringify({type:'done'}));document.querySelector('#__zwc_hint')?.remove();return}if(e.ctrlKey||e.metaKey||e.altKey||!allowed.has(e.key))return;const key=e.key===' '?'Space':(e.key==='Tab'&&e.shiftKey?'Shift+Tab':e.key);window.__zoomcheckSend(JSON.stringify({type:'step',step:{key,expect:selector(document.activeElement)}}))},true);const mount=()=>{if(document.querySelector('#__zwc_hint'))return;const d=document.createElement('div');d.id='__zwc_hint';d.setAttribute('role','status');d.textContent='ZOOM CHECK · recording keys · Alt+Shift+S to save';Object.assign(d.style,{position:'fixed',zIndex:2147483647,right:'12px',bottom:'12px',padding:'12px 16px',background:'#18221d',color:'#fff9ec',font:'700 14px monospace',border:'3px solid #f2c94c',pointerEvents:'none'});document.documentElement.append(d)};document.readyState==='loading'?addEventListener('DOMContentLoaded',mount,{once:true}):mount()})()"#;
 
 const SNAPSHOT_JS: &str = r#"JSON.stringify((()=>{const e=document.activeElement||document.body,r=e.getBoundingClientRect(),s=getComputedStyle(e),vw=innerWidth,vh=innerHeight;let ancestorClipped=false,scrollable=document.documentElement.scrollHeight>vh||document.documentElement.scrollWidth>vw;for(let p=e.parentElement;p;p=p.parentElement){const ps=getComputedStyle(p),pr=p.getBoundingClientRect(),clip=/(hidden|clip|auto|scroll)/.test(ps.overflow+ps.overflowX+ps.overflowY);if(clip&&(r.left<pr.left-1||r.right>pr.right+1||r.top<pr.top-1||r.bottom>pr.bottom+1))ancestorClipped=true;if(p.scrollHeight>p.clientHeight+1||p.scrollWidth>p.clientWidth+1)scrollable=true}const points=[[r.left+r.width/2,r.top+r.height/2],[r.left+2,r.top+2],[r.right-2,r.bottom-2]].filter(([x,y])=>x>=0&&y>=0&&x<vw&&y<vh);const obscured=points.length>0&&!points.some(([x,y])=>{const t=document.elementFromPoint(x,y);return t&&(t===e||e.contains(t))});const id=x=>{if(!x||x===document.body)return'e-body';if(x.id)return'#'+CSS.escape(x.id);for(const a of ['data-testid','name','aria-label'])if(x.hasAttribute(a))return x.tagName.toLowerCase()+'['+a+'="'+CSS.escape(x.getAttribute(a))+'"]';let q=x.tagName.toLowerCase(),p=x.parentElement;if(p){const same=[...p.children].filter(n=>n.tagName===x.tagName);if(same.length>1)q+=`:nth-of-type(${same.indexOf(x)+1})`}return q};const labelled=e.getAttribute('aria-labelledby'),label=labelled&&document.getElementById(labelled);const name=e.getAttribute('aria-label')||(label&&label.textContent)||e.getAttribute('alt')||e.getAttribute('title')||e.value||e.innerText||'';return{selector:id(e),element:e.tagName.toLowerCase(),accessibleName:String(name).trim().replace(/\s+/g,' ').slice(0,160),rect:{x:r.x,y:r.y,width:r.width,height:r.height},viewportWidth:vw,viewportHeight:vh,scrollX:scrollX,scrollY:scrollY,scrollable,focusVisible:(s.outlineStyle!=='none'&&parseFloat(s.outlineWidth)>0)||s.boxShadow!=='none',viewportClipped:r.width<=0||r.height<=0||r.left<0||r.top<0||r.right>vw+1||r.bottom>vh+1,ancestorClipped,obscured}})())"#;
 

@@ -1,6 +1,11 @@
 node_modules/
+target/
 dist/
 .env
 *.log
 graphify-out/
 .DS_Store
+zoomcheck-report/
+.zoomcheck/
+test-results/
+playwright-report/

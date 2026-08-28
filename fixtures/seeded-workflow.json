@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "name": "Seeded clipping and obstruction suite",
+  "url": "http://127.0.0.1:8765/fixtures/seeded.html",
+  "settle_ms": 40,
+  "steps": [
+    {"key":"Tab","expect":"#good-1"},{"key":"Tab","expect":"#good-2"},
+    {"key":"Tab","expect":"#good-3"},{"key":"Tab","expect":"#good-4"},
+    {"key":"Tab","expect":"#good-5"},{"key":"Tab","expect":"#good-6"},
+    {"key":"Tab","expect":"#good-7"},{"key":"Tab","expect":"#good-8"},
+    {"key":"Tab","expect":"#good-9"},{"key":"Tab","expect":"#good-10"},
+    {"key":"Tab","expect":"#bad-1"},{"key":"Tab","expect":"#bad-2"},
+    {"key":"Tab","expect":"#bad-3"},{"key":"Tab","expect":"#bad-4"},
+    {"key":"Tab","expect":"#bad-5"},{"key":"Tab","expect":"#bad-6"},
+    {"key":"Tab","expect":"#bad-7"},{"key":"Tab","expect":"#bad-8"},
+    {"key":"Tab","expect":"#bad-9"},{"key":"Tab","expect":"#bad-10"}
+  ]
+}
