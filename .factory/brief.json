@@ -1,0 +1,10 @@
+{
+  "slug": "zoom-workflow-check",
+  "title": "Zoom Workflow Check",
+  "territory": "utilities",
+  "user": "Small web teams and accessibility consultants who need to show whether a real keyboard workflow remains operable at 200–400% browser zoom.",
+  "smallest_useful_product": "Playwright-compatible CLI that records a short keyboard path, reruns it at 200% and 400%, captures focused-element visibility/clipping/scrollability, and outputs a visual HTML diff.",
+  "artifact_class": "cli",
+  "monetization": "free",
+  "constraints": "Use real browser zoom semantics; avoid claiming WCAG certification; screenshots remain local/CI-scoped."
+}
