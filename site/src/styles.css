@@ -207,7 +207,8 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
   .hero { grid-template-columns: 1fr; min-height: auto; padding-top: 64px; }
   .hero-copy { max-width: 780px; }
   .hero-art { max-width: 820px; }
-  .install-section, .method-section { grid-template-columns: 1fr; gap: 36px; }
+  .install-section, .method-section { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+  .install-section > *, .method-section > * { min-width: 0; }
   .section-intro { position: static; }
   .evidence-sheet { grid-template-columns: 1fr; }
   .browser-proof { border-right: 0; border-bottom: var(--line); }

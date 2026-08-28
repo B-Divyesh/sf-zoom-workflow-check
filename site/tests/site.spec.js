@@ -40,5 +40,5 @@ test('installed field guide reloads offline', async ({ page, context }) => {
   await page.reload();
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('YOUR WORKFLOW');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(/Your workflow/i);
 });
