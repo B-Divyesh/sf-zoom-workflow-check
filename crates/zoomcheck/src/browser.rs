@@ -244,6 +244,9 @@ fn ensure_page_loaded(tab: &std::sync::Arc<headless_chrome::Tab>, requested: &st
 }
 
 fn apply_browser_zoom(tab: &std::sync::Arc<headless_chrome::Tab>, zoom: u16) -> Result<()> {
+    // Browser zoom narrows the CSS viewport while increasing device pixels per CSS pixel.
+    // Applying both through Chromium's desktop device metrics preserves responsive layout,
+    // fixed positioning, overflow, and high-density rendering; this is not CSS `zoom`.
     let factor = zoom as f64 / 100.0;
     tab.call_method(SetDeviceMetricsOverride {
         width: (1280.0 / factor).round() as u32,

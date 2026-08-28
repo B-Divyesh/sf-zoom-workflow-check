@@ -15,7 +15,7 @@ use zoomcheck::{RunReport, Step, Workflow, report};
     name = "zoomcheck",
     version,
     about = "Replay a keyboard workflow at high browser zoom",
-    long_about = "Record a real keyboard path, replay it with Chromium's persisted page zoom at 200% and 400%, and write local visual evidence. This is an engineering check, not WCAG certification."
+    long_about = "Record a real keyboard path, replay it with Chromium's desktop high-zoom viewport semantics at 200% and 400%, and write local visual evidence. This is an engineering check, not WCAG certification."
 )]
 struct Cli {
     #[command(subcommand)]
