@@ -1,0 +1,9 @@
+[workspace]
+members = ["crates/zoomcheck"]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/B-Divyesh/sf-zoom-workflow-check"
+rust-version = "1.85"
