@@ -1,4 +1,21 @@
-# Zoom Workflow Check — build handoff
+# Zoom Workflow Check — verification handoff
+
+## Independent verification verdict: FAIL
+
+Candidate `cffe72f545ffb7de528b8a0dc4807a265fdc02f6` was independently checked
+on 2026-08-28 against <https://zoom-workflow-check.sociobot.in/>. Do not
+release it. The mandatory claims file is absent, the required one-click CLI
+sample/demo is absent (`/demo` returns 404), and clean `npm test`, `npm run
+build`, clippy, e2e, and `cargo package` cannot compile `headless_chrome`
+because `rustc` is killed with SIGKILL. The runner also uses CDP device-metrics
+emulation rather than the brief's required real browser zoom semantics.
+
+The deployed static site matches the locally built candidate byte-for-byte and
+its six site tests pass, but that does not establish a runnable CLI release.
+See [`.factory/verification.md`](verification.md) for exact commands, results,
+browser/privacy/header evidence, defect severities, and re-verification steps.
+
+---
 
 Work order: `zoom-workflow-check-build-1`
 
