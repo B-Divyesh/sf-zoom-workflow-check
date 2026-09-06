@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Run through a bundled Zoom Workflow Check sample and inspect its local high-zoom report.">
+    <meta name="theme-color" content="#f3ebd8">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Demo — Zoom Workflow Check">
+    <meta property="og:description" content="Inspect a bundled checkout workflow report at 200% and 400% browser zoom.">
+    <meta property="og:url" content="https://zoom-workflow-check.sociobot.in/demo/">
+    <meta property="og:image" content="https://zoom-workflow-check.sociobot.in/zoom-field-sheet-og.webp">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="canonical" href="https://zoom-workflow-check.sociobot.in/demo/">
+    <link rel="icon" href="/focus-mark.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="stylesheet" href="/src/styles.css">
+    <script type="module" src="/src/demo.js"></script>
+    <title>Demo — Zoom Workflow Check</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <header class="site-header">
+      <a class="wordmark" href="/" aria-label="Zoom Workflow Check home"><span aria-hidden="true">Z/WC</span><span>Zoom workflow check</span></a>
+      <nav aria-label="Primary navigation">
+        <a href="/demo/" aria-current="page">Demo</a>
+        <a href="/#install">Install</a>
+        <a href="/#checks">Checks</a>
+        <a href="/privacy/">Privacy</a>
+      </nav>
+    </header>
+    <aside class="demo-banner" aria-label="Sample demo status"><strong>Demo — sample data, nothing is saved</strong><span>This page does not read or write your workflow files.</span><button type="button" id="reset-demo">Reset demo</button><a href="/#install">Start for real</a></aside>
+
+    <main id="main" class="demo-main">
+      <section class="demo-hero" aria-labelledby="demo-title">
+        <p class="kicker">Bundled checkout flyout</p>
+        <h1 id="demo-title">Check a sample keyboard path</h1>
+        <p class="lede">For web teams and accessibility consultants, inspect a populated local report before testing your own workflow.</p>
+        <div class="terminal-recording" aria-label="Recorded terminal output from the bundled sample">
+          <div class="terminal-bar"><span>Recorded terminal run</span><span aria-hidden="true">● ● ●</span></div>
+          <pre><code>$ zoomcheck demo
+CHECK · 4 failures · 0 warnings
+Sample and report: /tmp/zoomcheck-demo-…/index.html
+Exit 1: known blocked controls were found.</code></pre>
+        </div>
+        <p class="demo-command-note">Run <code>zoomcheck demo</code> after installing. It creates a separate temporary sample folder.</p>
+      </section>
+
+      <section class="demo-report" aria-labelledby="report-title">
+        <div class="demo-report-heading"><div><p class="kicker">Populated sample report</p><h2 id="report-title">Checkout flyout findings</h2></div><p class="report-status"><span aria-hidden="true">!</span> 4 blocking findings</p></div>
+        <div class="sample-runs">
+          <article><header><h3>200% zoom</h3><strong>1 blocked</strong></header><dl><div><dt>Focused control</dt><dd><code>#pay-securely</code></dd></div><div><dt>Visible area</dt><dd>640 CSS px wide</dd></div><div><dt>Finding</dt><dd>Button is clipped by the flyout edge.</dd></div></dl></article>
+          <article><header><h3>400% zoom</h3><strong>3 blocked</strong></header><dl><div><dt>Focused control</dt><dd><code>#pay-securely</code></dd></div><div><dt>Visible area</dt><dd>320 CSS px wide</dd></div><div><dt>Finding</dt><dd>Controls extend past the fixed flyout.</dd></div></dl></article>
+        </div>
+        <div class="sample-path"><h3>Keyboard path</h3><ol><li><kbd>Tab</kbd> Delivery note</li><li><kbd>Tab</kbd> Continue checkout</li><li><kbd>Tab</kbd> Pay securely</li></ol><p>The generated HTML report also includes screenshots and geometry for each selected zoom level. It stays in the temporary sample folder.</p></div>
+      </section>
+
+      <section class="demo-next" aria-labelledby="next-title"><p class="kicker">Next step</p><h2 id="next-title">Run this check on your workflow</h2><p>Install the CLI, record your real path, then keep the HTML report with your test evidence.</p><a class="button primary" href="/#install">Install and record a workflow</a></section>
+    </main>
+    <footer class="site-footer">
+      <div><a class="wordmark" href="/" aria-label="Zoom Workflow Check home"><span aria-hidden="true">Z/WC</span><span>Zoom workflow check</span></a><p>Local CLI checks keyboard workflows at browser zoom.</p></div>
+      <nav aria-label="Footer navigation"><a href="/demo/">Demo</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="https://github.com/B-Divyesh/sf-zoom-workflow-check">Source</a></nav>
+      <p class="build-id">Built by Param Factory · v0.1.1</p>
+    </footer>
+  </body>
+</html>

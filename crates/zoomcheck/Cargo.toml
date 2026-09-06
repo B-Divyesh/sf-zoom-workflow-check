@@ -1,6 +1,6 @@
 [package]
 name = "zoomcheck"
-version = "0.1.0"
+version = "0.1.1"
 description = "Replay keyboard workflows at 200% and 400% Chromium zoom"
 keywords = ["accessibility", "zoom", "keyboard", "chromium", "cli"]
 categories = ["command-line-utilities", "development-tools::testing"]
@@ -17,10 +17,11 @@ path = "src/main.rs"
 [dependencies]
 anyhow = "1.0"
 clap = { version = "4.5", features = ["derive"] }
-headless_chrome = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tempfile = "3.20"
+tungstenite = { version = "0.24", default-features = false, features = ["handshake"] }
+base64 = "0.22"
 
 [dev-dependencies]
 assert_cmd = "2.0"

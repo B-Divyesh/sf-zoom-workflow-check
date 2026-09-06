@@ -3,120 +3,122 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Replay a real keyboard workflow at 200% and 400% browser zoom and keep the evidence local.">
+    <meta name="description" content="Check real keyboard workflows at 200% and 400% Chromium desktop zoom and keep local visual evidence.">
     <meta name="theme-color" content="#f3ebd8">
-    <title>Zoom Workflow Check — keyboard paths under high zoom</title>
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Zoom Workflow Check — check keyboard workflows at high zoom">
+    <meta property="og:description" content="Find blocked keyboard controls at 200% and 400% browser zoom with a local CLI report.">
+    <meta property="og:url" content="https://zoom-workflow-check.sociobot.in/">
+    <meta property="og:image" content="https://zoom-workflow-check.sociobot.in/zoom-field-sheet-og.webp">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Zoom Workflow Check — check keyboard workflows at high zoom">
+    <meta name="twitter:description" content="Find blocked keyboard controls at 200% and 400% browser zoom with a local CLI report.">
+    <meta name="twitter:image" content="https://zoom-workflow-check.sociobot.in/zoom-field-sheet-og.webp">
+    <link rel="canonical" href="https://zoom-workflow-check.sociobot.in/">
     <link rel="icon" href="/focus-mark.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="stylesheet" href="/src/styles.css">
     <script type="module" src="/src/main.js"></script>
+    <title>Zoom Workflow Check — check keyboard workflows</title>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to main content</a>
-    <div class="offline-note" id="offline-note" role="status" hidden>You’re offline. The field guide is still available; install commands need a connection.</div>
+    <div class="offline-note" id="offline-note" role="status" hidden>You’re offline. The guide and sample remain available after their first visit.</div>
     <header class="site-header">
       <a class="wordmark" href="/" aria-label="Zoom Workflow Check home"><span aria-hidden="true">Z/WC</span><span>Zoom workflow check</span></a>
       <nav aria-label="Primary navigation">
+        <a href="/demo/">Demo</a>
         <a href="#install">Install</a>
-        <a href="#method">Method</a>
-        <a href="https://github.com/B-Divyesh/sf-zoom-workflow-check">Source</a>
+        <a href="#checks">Checks</a>
+        <a href="/privacy/">Privacy</a>
       </nav>
     </header>
 
     <main id="main">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="kicker"><span aria-hidden="true">●</span> Local keyboard evidence</p>
-          <h1 id="hero-title">Your workflow,<br><em>under pressure.</em></h1>
-          <p class="lede">Record a keyboard path once. Replay it at 200% and 400% browser zoom. Catch clipped dialogs, hidden focus, and controls a generic audit never tried to reach.</p>
+          <p class="kicker"><span aria-hidden="true">●</span> Local CLI evidence</p>
+          <h1 id="hero-title">Check keyboard workflows at high zoom</h1>
+          <p class="lede">For small web teams and accessibility consultants, find blocked keyboard controls before users report them.</p>
           <div class="hero-actions">
-            <a class="button primary" href="#install">Install the CLI</a>
-            <a class="button secondary" href="#demo">Inspect a report</a>
+            <a class="button primary" href="/demo/">Try it with sample data</a>
+            <span class="action-note">See a populated local report without setup.</span>
           </div>
-          <p class="plain-note"><strong>Free and open source.</strong> No account. No telemetry. Screenshots stay on your machine or CI runner.</p>
+          <ul class="plain-facts" aria-label="Product facts">
+            <li>Free CLI. No account is required.</li>
+            <li>Reports and screenshots stay on your machine or CI runner.</li>
+            <li>Uses Chromium desktop zoom at 200% and 400%.</li>
+          </ul>
         </div>
         <figure class="hero-art">
           <div class="tape" aria-hidden="true"></div>
-          <img src="/zoom-field-sheet.webp" width="1200" height="800" alt="Risograph collage of a magnifying glass revealing a keyboard focus path that ends at a clipped control" fetchpriority="high">
-          <figcaption><span>Plate 01</span> Browser zoom changes the space your interface has to work.</figcaption>
+          <img src="/zoom-field-sheet.webp" width="1200" height="800" alt="Magnifying glass showing a keyboard focus path ending at a clipped control" fetchpriority="high">
+          <figcaption><span>Browser zoom evidence</span> See each focus stop in the final local report.</figcaption>
         </figure>
       </section>
 
-      <section class="path-strip" aria-label="Three-step workflow">
+      <section class="path-strip" aria-labelledby="how-title">
+        <h2 id="how-title" class="sr-only">How it works</h2>
         <ol>
-          <li><span>01</span><strong>Record</strong><small>Use the real path</small></li>
-          <li><span>02</span><strong>Replay</strong><small>200% + 400%</small></li>
-          <li><span>03</span><strong>Show</strong><small>Keep local evidence</small></li>
+          <li><span>01</span><strong>Record</strong><small>Use a real keyboard path</small></li>
+          <li><span>02</span><strong>Replay</strong><small>At 200% and 400%</small></li>
+          <li><span>03</span><strong>Review</strong><small>Open the local report</small></li>
         </ol>
       </section>
 
       <section class="install-section" id="install" aria-labelledby="install-title">
         <div class="section-intro">
-          <p class="kicker">The two-command check</p>
-          <h2 id="install-title">Name the journey.<br>Keep the proof.</h2>
-          <p>This is deliberately smaller than a test platform. One JSON workflow, two zoom levels, one visual report.</p>
+          <p class="kicker">Install the CLI</p>
+          <h2 id="install-title">Run a workflow check</h2>
+          <p>Record a path once, then keep one report for each selected zoom level.</p>
         </div>
         <div class="command-sheet">
           <p class="sheet-label">Build from source</p>
-          <div class="code-row"><code id="install-command">cargo install --git https://github.com/B-Divyesh/sf-zoom-workflow-check zoomcheck</code><button class="copy" type="button" data-copy="install-command">Copy<span class="sr-only"> install command</span></button></div>
-          <p class="sheet-label">1 · Record (finish with Alt+Shift+S)</p>
+          <div class="code-row"><code id="install-command">cargo install --path crates/zoomcheck</code><button class="copy" type="button" data-copy="install-command">Copy<span class="sr-only"> install command</span></button></div>
+          <p class="sheet-label">Run the bundled sample</p>
+          <div class="code-row"><code id="demo-command">zoomcheck demo</code><button class="copy" type="button" data-copy="demo-command">Copy<span class="sr-only"> sample command</span></button></div>
+          <p class="code-foot">The sample writes its own temporary folder and reports known blocked controls. It exits 1 because those findings are intentional.</p>
+          <p class="sheet-label">Record and replay your path</p>
           <pre><code>zoomcheck record https://app.example.test/cart \
   --name "Complete checkout" \
-  --out .zoomcheck/checkout.json</code></pre>
-          <p class="sheet-label">2 · Replay</p>
-          <pre><code>zoomcheck check .zoomcheck/checkout.json \
+  --out .zoomcheck/checkout.json
+
+zoomcheck check .zoomcheck/checkout.json \
   --out artifacts/zoomcheck</code></pre>
-          <p class="code-foot">CI exits 1 for blocking findings and 2 for invalid input or a failed browser run. Add <code>--json --quiet</code> for scripting.</p>
         </div>
       </section>
 
-      <section class="demo-section" id="demo" aria-labelledby="demo-title">
-        <div class="demo-heading">
-          <div><p class="kicker">Seeded report · cart flyout</p><h2 id="demo-title">Same path.<br>Less room.</h2></div>
-          <div class="zoom-tabs" role="tablist" aria-label="Report zoom level">
-            <button id="tab-200" role="tab" aria-selected="true" aria-controls="panel-zoom" data-zoom="200">200%</button>
-            <button id="tab-400" role="tab" aria-selected="false" aria-controls="panel-zoom" tabindex="-1" data-zoom="400">400%</button>
-          </div>
+      <section class="report-preview" aria-labelledby="preview-title">
+        <div>
+          <p class="kicker">Bundled sample output</p>
+          <h2 id="preview-title">Review a local zoom report</h2>
+          <p>The sample checks a checkout flyout with a payment button hidden below its fixed edge.</p>
+          <a class="button secondary" href="/demo/">Open the sample report</a>
         </div>
-        <div class="evidence-sheet" id="panel-zoom" role="tabpanel" aria-labelledby="tab-200" tabindex="0">
-          <div class="browser-proof" aria-label="Illustrated browser viewport at 200 percent zoom">
-            <div class="browser-bar"><i></i><i></i><i></i><span>app.example.test/cart</span></div>
-            <div class="viewport-demo" data-state="200">
-              <div class="page-lines" aria-hidden="true"><span></span><span></span><span></span></div>
-              <div class="flyout"><p>Cart review</p><label>Delivery note<input value="Leave by the door" readonly></label><button type="button">Continue</button><button type="button" class="focus-target">Pay securely</button></div>
-              <span class="focus-number" aria-hidden="true">4</span>
-              <p class="visual-caption"><strong>Focused control:</strong> <code>#pay-securely</code></p>
-            </div>
-          </div>
-          <div class="finding-summary" aria-live="polite">
-            <div><span class="status-symbol" aria-hidden="true">✓</span><p><small>Result</small><strong id="demo-result">Passes at 200%</strong></p></div>
-            <dl>
-              <div><dt>Visible area</dt><dd id="demo-viewport">640 × 450 CSS px</dd></div>
-              <div><dt>Focus order</dt><dd>4 / 4 expected stops</dd></div>
-              <div><dt>Obscured</dt><dd id="demo-obscured">No</dd></div>
-              <div><dt>Scroll path</dt><dd id="demo-scroll">Available</dd></div>
-            </dl>
-            <p id="demo-detail">The focused payment button remains fully inside the flyout and viewport.</p>
-          </div>
-        </div>
-        <noscript><p class="noscript-note">The report comparison defaults to its 200% evidence. JavaScript only switches this local demo; the documentation and CLI do not depend on it.</p></noscript>
+        <dl class="preview-results">
+          <div><dt>200% zoom</dt><dd><strong>1 blocked</strong><span>Payment button is clipped</span></dd></div>
+          <div><dt>400% zoom</dt><dd><strong>3 blocked</strong><span>Focus stops exceed the flyout</span></dd></div>
+          <div><dt>Output</dt><dd><strong>Local HTML</strong><span>Screenshots stay with the report</span></dd></div>
+        </dl>
       </section>
 
-      <section class="method-section" id="method" aria-labelledby="method-title">
-        <div class="section-intro"><p class="kicker">What the runner observes</p><h2 id="method-title">Focus is a moving target.</h2><p>Static rules cannot tell you whether a person can finish a named task. The runner samples evidence after every key.</p></div>
+      <section class="method-section" id="checks" aria-labelledby="checks-title">
+        <div class="section-intro"><p class="kicker">Checks after every key</p><h2 id="checks-title">Find blocked focus stops</h2><p>Static audits do not replay a task. This runner collects geometry and focus evidence after each key.</p></div>
         <div class="checks-list">
-          <article><span aria-hidden="true">A</span><div><h3>Order + name</h3><p>Did focus reach the expected control, and does that control have a detectable accessible name?</p></div></article>
-          <article><span aria-hidden="true">B</span><div><h3>Indicator</h3><p>Is an outline or box-shadow focus treatment present after the keyboard step?</p></div></article>
-          <article><span aria-hidden="true">C</span><div><h3>Clipping + cover</h3><p>Is the focus box inside the zoomed viewport and its overflow ancestors, with sampled points unobscured?</p></div></article>
-          <article><span aria-hidden="true">D</span><div><h3>Scroll reach</h3><p>Can the document or a containing region scroll when zoom makes the path larger than the available space?</p></div></article>
+          <article><span aria-hidden="true">A</span><div><h3>Order and name</h3><p>Checks whether focus reached the expected control and whether that control has a name.</p></div></article>
+          <article><span aria-hidden="true">B</span><div><h3>Focus indicator</h3><p>Records whether the focused control has an outline or box-shadow treatment.</p></div></article>
+          <article><span aria-hidden="true">C</span><div><h3>Clipping and cover</h3><p>Checks the viewport, overflow ancestors, and sampled points over the focused control.</p></div></article>
+          <article><span aria-hidden="true">D</span><div><h3>Scroll path</h3><p>Records whether the document or a containing region can scroll to expose focus.</p></div></article>
         </div>
       </section>
 
-      <aside class="honesty-note" aria-labelledby="honesty-title"><p class="kicker">Scope note</p><h2 id="honesty-title">Evidence, not a certificate.</h2><p>Zoom Workflow Check finds workflow breakage. It does not certify WCAG conformance, replace manual testing, or upload a report for you. Review screenshots before sharing; they can contain sensitive interface content.</p><a href="https://github.com/B-Divyesh/sf-zoom-workflow-check#readme">Read the full methodology <span aria-hidden="true">→</span></a></aside>
+      <aside class="honesty-note" aria-labelledby="limits-title"><p class="kicker">Limits and privacy</p><h2 id="limits-title">What this tool does not do</h2><p>It does not certify WCAG conformance or replace manual testing. It does not upload reports. Review local screenshots before sharing them because they can contain sensitive interface content.</p><a href="/privacy/">Read the privacy policy <span aria-hidden="true">→</span></a></aside>
     </main>
 
     <footer class="site-footer">
-      <div><a class="wordmark" href="/" aria-label="Zoom Workflow Check home"><span aria-hidden="true">Z/WC</span><span>Built for paths under pressure.</span></a><p>Free, local-first engineering evidence.</p></div>
-      <nav aria-label="Footer navigation"><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="https://github.com/B-Divyesh/sf-zoom-workflow-check">GitHub</a></nav>
+      <div><a class="wordmark" href="/" aria-label="Zoom Workflow Check home"><span aria-hidden="true">Z/WC</span><span>Zoom workflow check</span></a><p>Local CLI checks keyboard workflows at browser zoom.</p></div>
+      <nav aria-label="Footer navigation"><a href="/demo/">Demo</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="https://github.com/B-Divyesh/sf-zoom-workflow-check">Source</a></nav>
+      <p class="build-id">Built by Param Factory · v0.1.1</p>
     </footer>
     <div class="copy-status" id="copy-status" role="status" aria-live="polite"></div>
   </body>

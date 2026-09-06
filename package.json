@@ -1,15 +1,17 @@
 {
   "name": "zoom-workflow-check-site",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --config site/vite.config.js",
     "build:site": "vite build --config site/vite.config.js",
     "build": "npm run build:site && cargo build --release -p zoomcheck",
+    "lint": "cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings",
     "preview": "vite preview --config site/vite.config.js --host 127.0.0.1",
     "test": "cargo test --workspace && npm run build:site && playwright test",
-    "test:e2e": "bash scripts/test-e2e.sh"
+    "test:e2e": "bash scripts/test-e2e.sh",
+    "test:consumer": "bash scripts/test-consumer.sh"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",

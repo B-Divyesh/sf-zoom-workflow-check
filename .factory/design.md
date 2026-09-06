@@ -69,6 +69,9 @@ layering, so depth does not depend on motion.
   project MIT license; generator metadata is stored beside the source artifact.
 - `site/public/focus-mark.svg` and the tiny focus-path/status marks are
   hand-authored geometric SVG/CSS, not stock icons.
+- `site/public/zoom-field-sheet-og.webp` and `apple-touch-icon.png` are local
+  crops of the generated field-sheet artwork for sharing and device icons; no
+  new external image source was added.
 
 The generated image clarifies the core idea—magnification exposing a blocked
 keyboard path—and is the only raster illustration. Report thumbnails are user

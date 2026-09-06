@@ -1,0 +1,44 @@
+[
+  {
+    "id": "offline-reload",
+    "claim": "Documentation reloads offline after the first visit",
+    "where": "landing offline notice, privacy policy, README",
+    "test": "npm test -- --grep @claim:offline-reload",
+    "sandbox": "fresh browser context; visit /demo/, wait for its service worker, go offline, and reload the demo page"
+  },
+  {
+    "id": "site-local-requests",
+    "claim": "The documentation sample page uses no third-party network request",
+    "where": "privacy policy",
+    "test": "npm test -- --grep @claim:site-local-requests",
+    "sandbox": "fresh browser context; visit landing, enter /demo/, reset it, and record every browser request"
+  },
+  {
+    "id": "bundled-cli-demo",
+    "claim": "The CLI includes a sample that writes a local report, screenshots, and sample files",
+    "where": "landing install section, /demo, README",
+    "test": "npm test -- --grep @claim:bundled-cli-demo",
+    "sandbox": "fresh temporary directory; run target/debug/zoomcheck demo and assert the generated report, images, and sample files"
+  },
+  {
+    "id": "no-account-required",
+    "claim": "The bundled CLI sample runs without account setup",
+    "where": "landing product facts",
+    "test": "npm test -- --grep @claim:no-account-required",
+    "sandbox": "fresh temporary directory; run the bundled demo with no credentials or account configuration"
+  },
+  {
+    "id": "native-desktop-zoom",
+    "claim": "The CLI replays native Chromium desktop zoom at 200% and 400%",
+    "where": "landing product facts, README",
+    "test": "npm test -- --grep @claim:native-desktop-zoom",
+    "sandbox": "fresh temporary directory; run the bundled CLI sample and assert Chromium's 200% and 400% CSS viewport widths and DPR values"
+  },
+  {
+    "id": "focus-blocking-findings",
+    "claim": "The sample identifies a clipped focused control at high zoom",
+    "where": "landing checks section, /demo, README",
+    "test": "npm test -- --grep @claim:focus-blocking-findings",
+    "sandbox": "fresh temporary directory; run the bundled sample and assert 400% viewport-clipping findings"
+  }
+]

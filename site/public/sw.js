@@ -1,5 +1,5 @@
-const CACHE = 'zoomcheck-field-guide-v1';
-const SHELL = ['/', '/privacy/', '/terms/', '/zoom-field-sheet.webp', '/focus-mark.svg'];
+const CACHE = 'zoomcheck-field-guide-v2';
+const SHELL = ['/', '/demo/', '/privacy/', '/terms/', '/404.html', '/zoom-field-sheet.webp', '/zoom-field-sheet-og.webp', '/focus-mark.svg', '/apple-touch-icon.png'];
 self.addEventListener('install', (event) => event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL))));
 self.addEventListener('activate', (event) => event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))));
 self.addEventListener('fetch', (event) => {

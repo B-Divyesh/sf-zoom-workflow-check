@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Checkout flyout sample</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 24px; color: #18221d; background: #f3ebd8; font: 18px/1.5 system-ui, sans-serif; }
+      main { min-height: 680px; padding: 28px; background: #fff9ec; border: 3px solid #18221d; }
+      .flyout { position: fixed; top: 64px; right: 24px; width: 48%; height: 390px; overflow: hidden; padding: 24px; border: 3px solid #18221d; background: #fff9ec; }
+      label { display: grid; gap: 8px; font-weight: 700; }
+      input, button { width: 100%; min-height: 48px; margin: 8px 0 20px; border: 2px solid #18221d; padding: 8px; font: inherit; }
+      button { background: #095d9a; color: white; font-weight: 800; }
+      button:focus { outline: 4px solid #f2c94c; outline-offset: 3px; }
+      #pay-securely { transform: translateY(290px); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Checkout review</h1>
+      <p>This bundled sample has a payment button clipped by a fixed-height flyout.</p>
+      <section class="flyout" aria-label="Checkout controls">
+        <label>Delivery note <input id="delivery-note" value="Leave by the door"></label>
+        <button id="continue-checkout" type="button">Continue checkout</button>
+        <button id="pay-securely" type="button">Pay securely</button>
+      </section>
+    </main>
+  </body>
+</html>

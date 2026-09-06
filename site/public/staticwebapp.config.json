@@ -8,5 +8,8 @@
     "referrer-policy": "strict-origin-when-cross-origin",
     "x-content-type-options": "nosniff",
     "permissions-policy": "camera=(), microphone=(), geolocation=()"
+  },
+  "responseOverrides": {
+    "404": { "rewrite": "/404.html" }
   }
 }

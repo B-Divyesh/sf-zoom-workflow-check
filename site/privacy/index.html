@@ -3,32 +3,40 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Privacy practices for Zoom Workflow Check.">
+    <meta name="description" content="Privacy practices for Zoom Workflow Check and its local workflow reports.">
     <meta name="theme-color" content="#f3ebd8">
-    <title>Privacy — Zoom Workflow Check</title>
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Privacy — Zoom Workflow Check">
+    <meta property="og:description" content="Read how the local CLI and documentation site handle workflow evidence.">
+    <meta property="og:url" content="https://zoom-workflow-check.sociobot.in/privacy/">
+    <meta property="og:image" content="https://zoom-workflow-check.sociobot.in/zoom-field-sheet-og.webp">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="canonical" href="https://zoom-workflow-check.sociobot.in/privacy/">
     <link rel="icon" href="/focus-mark.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="stylesheet" href="/src/styles.css">
+    <title>Privacy — Zoom Workflow Check</title>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to main content</a>
-    <header class="site-header"><a class="wordmark" href="/" aria-label="Zoom Workflow Check home"><span aria-hidden="true">Z/WC</span><span>Zoom workflow check</span></a><nav aria-label="Primary navigation"><a href="/">Home</a><a href="/#install">Install</a></nav></header>
+    <header class="site-header"><a class="wordmark" href="/" aria-label="Zoom Workflow Check home"><span aria-hidden="true">Z/WC</span><span>Zoom workflow check</span></a><nav aria-label="Primary navigation"><a href="/demo/">Demo</a><a href="/#install">Install</a><a href="/#checks">Checks</a><a href="/privacy/" aria-current="page">Privacy</a></nav></header>
     <main class="legal-main" id="main">
-      <p class="kicker">Plain-language policy</p>
+      <p class="kicker">Privacy policy</p>
       <h1>Privacy</h1>
-      <p class="updated">Effective 28 August 2026</p>
+      <p class="updated">Effective 6 September 2026</p>
       <article>
-        <h2>The short version</h2>
+        <h2>Summary</h2>
         <p>The CLI has no account, analytics, telemetry, advertising, or cloud report service. Workflow files, page details, and screenshots are written only to the output path you choose.</p>
-        <h2>Website</h2>
-        <p>This static documentation site does not set analytics cookies or send page content to third-party scripts. Its service worker stores the public documentation and illustration in your browser cache so the guide works offline. Clear the site’s stored data in your browser to remove that cache.</p>
+        <h2>Documentation site</h2>
+        <p>This static documentation site does not load third-party scripts or analytics. Its service worker stores public pages and illustration files in your browser cache so the guide can reload offline after the first visit. Clear this site’s stored data in your browser to remove that cache.</p>
         <h2>CLI evidence</h2>
-        <p>A report can contain URLs, accessible names, layout measurements, and screenshots from the pages you test. Those files may be sensitive even though the tool does not upload them. Keep them in access-controlled CI artifacts, review them before sharing, and delete them according to your project’s retention policy.</p>
+        <p>A report can contain URLs, accessible names, layout measurements, and screenshots from the pages you test. Those files may be sensitive even though the tool does not upload them. Keep them in controlled CI artifacts, review them before sharing, and delete them under your project’s retention policy.</p>
         <h2>Network requests</h2>
-        <p>Chromium visits the workflow URL you provide and therefore makes the requests that page normally makes. Zoom Workflow Check itself does not add tracking or contact a Zoom Workflow Check server.</p>
+        <p>Chromium visits the workflow URL you provide and makes the requests that page normally makes. Zoom Workflow Check does not add tracking or contact a Zoom Workflow Check server.</p>
         <h2>Questions</h2>
-        <p>Open an issue in the <a href="https://github.com/B-Divyesh/sf-zoom-workflow-check">source repository</a> without including private screenshots or customer data.</p>
+        <p>Open an issue in the <a href="https://github.com/B-Divyesh/sf-zoom-workflow-check">source repository</a> without private screenshots or customer data.</p>
       </article>
     </main>
-    <footer class="site-footer"><div><a class="wordmark" href="/" aria-label="Zoom Workflow Check home"><span aria-hidden="true">Z/WC</span><span>Built for paths under pressure.</span></a></div><nav aria-label="Footer navigation"><a href="/privacy/" aria-current="page">Privacy</a><a href="/terms/">Terms</a><a href="https://github.com/B-Divyesh/sf-zoom-workflow-check">GitHub</a></nav></footer>
+    <footer class="site-footer"><div><a class="wordmark" href="/" aria-label="Zoom Workflow Check home"><span aria-hidden="true">Z/WC</span><span>Zoom workflow check</span></a><p>Local CLI checks keyboard workflows at browser zoom.</p></div><nav aria-label="Footer navigation"><a href="/demo/">Demo</a><a href="/privacy/" aria-current="page">Privacy</a><a href="/terms/">Terms</a><a href="https://github.com/B-Divyesh/sf-zoom-workflow-check">Source</a></nav><p class="build-id">Built by Param Factory · v0.1.1</p></footer>
   </body>
 </html>

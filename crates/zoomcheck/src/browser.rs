@@ -1,26 +1,20 @@
 use anyhow::{Context, Result, bail};
-use headless_chrome::{
-    Browser, LaunchOptions,
-    browser::tab::ModifierKey,
-    protocol::cdp::{
-        Emulation::SetDeviceMetricsOverride,
-        Page::{AddScriptToEvaluateOnNewDocument, CaptureScreenshotFormatOption},
-    },
-};
+use base64::Engine;
 use serde::Deserialize;
+use serde_json::{Value, json};
 use std::{
     env,
     ffi::OsStr,
     fs,
+    io::{Read, Write},
+    net::{TcpListener, TcpStream},
     path::{Path, PathBuf},
-    sync::{
-        Arc, Mutex,
-        atomic::{AtomicBool, Ordering},
-    },
+    process::{Child, Command, Stdio},
     thread,
     time::{Duration, Instant},
 };
 use tempfile::TempDir;
+use tungstenite::{Error as WebSocketError, Message, WebSocket, connect, stream::MaybeTlsStream};
 use zoomcheck::model::{Finding, FindingKind, Rect, Severity, Step, StepResult, Workflow, ZoomRun};
 
 pub fn find_browser(explicit: Option<&Path>) -> Result<PathBuf> {
@@ -76,24 +70,64 @@ fn find_playwright_chrome(root: &Path) -> Option<PathBuf> {
     None
 }
 
-fn launch(path: &Path, headless: bool) -> Result<(TempDir, Browser)> {
+struct BrowserSession {
+    _profile: TempDir,
+    child: Child,
+    cdp: Cdp,
+}
+
+impl Drop for BrowserSession {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+fn launch(path: &Path, headless: bool, zoom: u16) -> Result<BrowserSession> {
     let profile = tempfile::tempdir().context("create temporary browser profile")?;
-    let flags = [
-        OsStr::new("--disable-search-engine-choice-screen"),
-        OsStr::new("--no-first-run"),
-        OsStr::new("--hide-scrollbars"),
-    ];
-    let options = LaunchOptions::default_builder()
-        .path(Some(path.to_path_buf()))
-        .user_data_dir(Some(profile.path().to_path_buf()))
-        .headless(headless)
-        .sandbox(false)
-        .window_size(Some((1280, 900)))
-        .args(flags.to_vec())
-        .build()
-        .map_err(|e| anyhow::anyhow!("invalid browser options: {e}"))?;
-    let browser = Browser::new(options).context("start Chromium")?;
-    Ok((profile, browser))
+    write_zoom_preference(profile.path(), zoom)?;
+    let listener = TcpListener::bind("127.0.0.1:0").context("reserve Chromium debugging port")?;
+    let port = listener.local_addr()?.port();
+    drop(listener);
+    let mut command = Command::new(path);
+    command
+        .arg(format!("--user-data-dir={}", profile.path().display()))
+        .arg(format!("--remote-debugging-port={port}"))
+        .arg("--remote-debugging-address=127.0.0.1")
+        .arg("--remote-allow-origins=*")
+        .arg("--disable-search-engine-choice-screen")
+        .arg("--no-first-run")
+        .arg("--hide-scrollbars")
+        .arg("--window-size=1280,900")
+        .arg("--no-sandbox")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    if headless {
+        command.arg("--headless=new");
+    }
+    let child = command.spawn().context("start Chromium")?;
+    let cdp = Cdp::connect(port).context("connect to Chromium DevTools")?;
+    Ok(BrowserSession {
+        _profile: profile,
+        child,
+        cdp,
+    })
+}
+
+fn write_zoom_preference(profile: &Path, zoom: u16) -> Result<()> {
+    let default_dir = profile.join("Default");
+    fs::create_dir_all(&default_dir)?;
+    // Chrome stores its desktop page zoom as a logarithmic zoom level in the
+    // profile. This is the same setting changed by Chrome's View > Zoom menu.
+    let level = (zoom as f64 / 100.0).ln() / 1.2_f64.ln();
+    let preferences = json!({
+        "partition": { "default_zoom_level": { "x": level } }
+    });
+    fs::write(
+        default_dir.join("Preferences"),
+        serde_json::to_vec(&preferences)?,
+    )?;
+    Ok(())
 }
 
 pub fn record(
@@ -103,49 +137,19 @@ pub fn record(
     browser_path: &Path,
     timeout: Duration,
 ) -> Result<()> {
-    let (_profile, browser) = launch(browser_path, false)
+    let mut browser = launch(browser_path, false, 100)
         .context("open recording browser (is a desktop display available?)")?;
-    let tab = browser.new_tab()?;
-    let recorded = Arc::new(Mutex::new(Vec::<Step>::new()));
-    let finished = Arc::new(AtomicBool::new(false));
-    let recorded_for_browser = Arc::clone(&recorded);
-    let finished_for_browser = Arc::clone(&finished);
-    tab.expose_function(
-        "__zoomcheckSend",
-        Arc::new(move |payload: serde_json::Value| {
-            let Some(payload) = payload.as_str() else {
-                return;
-            };
-            let Ok(envelope) = serde_json::from_str::<serde_json::Value>(payload) else {
-                return;
-            };
-            let Some(message) = envelope["args"].get(0).and_then(|value| value.as_str()) else {
-                return;
-            };
-            let Ok(message) = serde_json::from_str::<serde_json::Value>(message) else {
-                return;
-            };
-            match message["type"].as_str() {
-                Some("done") => finished_for_browser.store(true, Ordering::SeqCst),
-                Some("step") => {
-                    if let Ok(step) = serde_json::from_value::<Step>(message["step"].clone()) {
-                        recorded_for_browser.lock().unwrap().push(step);
-                    }
-                }
-                _ => {}
-            }
-        }),
+    browser
+        .cdp
+        .call("Runtime.addBinding", json!({ "name": "__zoomcheckSend" }))?;
+    browser.cdp.call(
+        "Page.addScriptToEvaluateOnNewDocument",
+        json!({ "source": RECORDER_JS }),
     )?;
-    tab.call_method(AddScriptToEvaluateOnNewDocument {
-        source: RECORDER_JS.into(),
-        world_name: None,
-        include_command_line_api: None,
-        run_immediately: None,
-    })?;
-    tab.navigate_to(url)?.wait_until_navigated()?;
-    ensure_page_loaded(&tab, url)?;
+    browser.cdp.navigate(url)?;
     eprintln!("Recording {name:?}. Use the page with the keyboard; press Alt+Shift+S to save.");
     let started = Instant::now();
+    let mut recorded = Vec::<Step>::new();
     loop {
         if started.elapsed() > timeout {
             bail!(
@@ -153,23 +157,44 @@ pub fn record(
                 timeout.as_secs()
             );
         }
-        if finished.load(Ordering::SeqCst) {
-            let workflow = Workflow {
-                version: 1,
-                name: name.into(),
-                url: url.into(),
-                settle_ms: 180,
-                steps: recorded.lock().unwrap().clone(),
-            };
-            workflow.validate()?;
-            if let Some(parent) = out.parent() {
-                fs::create_dir_all(parent)?;
-            }
-            fs::write(out, serde_json::to_vec_pretty(&workflow)?)?;
-            eprintln!("Saved {} steps to {}", workflow.steps.len(), out.display());
-            return Ok(());
+        let Some(event) = browser.cdp.next_event(Duration::from_millis(120))? else {
+            continue;
+        };
+        if event["method"] != "Runtime.bindingCalled"
+            || event["params"]["name"] != "__zoomcheckSend"
+        {
+            continue;
         }
-        thread::sleep(Duration::from_millis(120));
+        let Some(payload) = event["params"]["payload"].as_str() else {
+            continue;
+        };
+        let Ok(message) = serde_json::from_str::<Value>(payload) else {
+            continue;
+        };
+        match message["type"].as_str() {
+            Some("step") => {
+                if let Ok(step) = serde_json::from_value::<Step>(message["step"].clone()) {
+                    recorded.push(step);
+                }
+            }
+            Some("done") => {
+                let workflow = Workflow {
+                    version: 1,
+                    name: name.into(),
+                    url: url.into(),
+                    settle_ms: 180,
+                    steps: recorded,
+                };
+                workflow.validate()?;
+                if let Some(parent) = out.parent() {
+                    fs::create_dir_all(parent)?;
+                }
+                fs::write(out, serde_json::to_vec_pretty(&workflow)?)?;
+                eprintln!("Saved {} steps to {}", workflow.steps.len(), out.display());
+                return Ok(());
+            }
+            _ => {}
+        }
     }
 }
 
@@ -180,31 +205,29 @@ pub fn run_zoom(
     browser_path: &Path,
     headless: bool,
 ) -> Result<ZoomRun> {
-    let (_profile, browser) = launch(browser_path, headless)?;
-    let tab = browser.new_tab()?;
-    tab.navigate_to(&workflow.url)?.wait_until_navigated()?;
-    ensure_page_loaded(&tab, &workflow.url)?;
-    apply_browser_zoom(&tab, zoom)?;
+    let mut browser = launch(browser_path, headless, zoom)?;
+    browser.cdp.navigate(&workflow.url)?;
     thread::sleep(Duration::from_millis(workflow.settle_ms));
-    tab.evaluate(
-        "document.body && document.body.focus(); window.scrollTo(0,0)",
-        false,
-    )?;
+    browser
+        .cdp
+        .evaluate("document.body && document.body.focus(); window.scrollTo(0,0)")?;
     let mut results = Vec::new();
     for (index, step) in workflow.steps.iter().enumerate() {
-        press(&tab, &step.key)
+        browser
+            .cdp
+            .press(&step.key)
             .with_context(|| format!("send {:?} at step {}", step.key, index + 1))?;
         thread::sleep(Duration::from_millis(workflow.settle_ms));
-        let raw: BrowserSnapshot = eval_value(&tab, SNAPSHOT_JS)
+        let raw: BrowserSnapshot = eval_value(&mut browser.cdp, SNAPSHOT_JS)
             .with_context(|| format!("inspect focus after step {}", index + 1))?;
         results.push(classify(index + 1, step, raw));
     }
     let viewport: Viewport = eval_value(
-        &tab,
+        &mut browser.cdp,
         "JSON.stringify({width:innerWidth,height:innerHeight,dpr:devicePixelRatio})",
     )?;
     let screenshot_name = format!("zoom-{zoom}.png");
-    let png = tab.capture_screenshot(CaptureScreenshotFormatOption::Png, None, None, true)?;
+    let png = browser.cdp.screenshot()?;
     fs::write(out.join(&screenshot_name), png)?;
     let failures = results
         .iter()
@@ -235,65 +258,232 @@ pub fn run_zoom(
     })
 }
 
-fn ensure_page_loaded(tab: &std::sync::Arc<headless_chrome::Tab>, requested: &str) -> Result<()> {
-    let current = tab.get_url();
-    if current.starts_with("chrome-error://") {
-        bail!("could not load {requested}; check the URL, server, and network connection");
-    }
-    Ok(())
-}
-
-fn apply_browser_zoom(tab: &std::sync::Arc<headless_chrome::Tab>, zoom: u16) -> Result<()> {
-    // Browser zoom narrows the CSS viewport while increasing device pixels per CSS pixel.
-    // Applying both through Chromium's desktop device metrics preserves responsive layout,
-    // fixed positioning, overflow, and high-density rendering; this is not CSS `zoom`.
-    let factor = zoom as f64 / 100.0;
-    tab.call_method(SetDeviceMetricsOverride {
-        width: (1280.0 / factor).round() as u32,
-        height: (900.0 / factor).round() as u32,
-        device_scale_factor: factor,
-        mobile: false,
-        scale: Some(1.0),
-        screen_width: Some(1280),
-        screen_height: Some(900),
-        position_x: None,
-        position_y: None,
-        dont_set_visible_size: None,
-        screen_orientation: None,
-        viewport: None,
-        display_feature: None,
-        device_posture: None,
-    })?;
-    Ok(())
-}
-
-fn press(tab: &std::sync::Arc<headless_chrome::Tab>, key: &str) -> Result<()> {
-    match key {
-        "Shift+Tab" => {
-            tab.press_key_with_modifiers("Tab", Some(&[ModifierKey::Shift]))?;
-        }
-        "Space" => {
-            tab.press_key(" ")?;
-        }
-        key => {
-            tab.press_key(key)?;
-        }
-    }
-    Ok(())
-}
-
-fn eval_value<T: for<'de> Deserialize<'de>>(
-    tab: &std::sync::Arc<headless_chrome::Tab>,
-    js: &str,
-) -> Result<T> {
-    let object = tab.evaluate(js, false)?;
-    let value = object
-        .value
-        .context("browser expression returned no value")?;
+fn eval_value<T: for<'de> Deserialize<'de>>(cdp: &mut Cdp, js: &str) -> Result<T> {
+    let value = cdp.evaluate(js)?;
     let encoded = value
         .as_str()
         .context("browser expression did not return JSON text")?;
     serde_json::from_str(encoded).context("decode browser result")
+}
+
+struct Cdp {
+    socket: WebSocket<MaybeTlsStream<TcpStream>>,
+    next_id: u64,
+    queued_events: Vec<Value>,
+}
+
+impl Cdp {
+    fn connect(port: u16) -> Result<Self> {
+        let deadline = Instant::now() + Duration::from_secs(12);
+        loop {
+            let last_error = match http_request(port, "GET", "/json/list") {
+                Ok(body) => {
+                    let url = serde_json::from_slice::<Value>(&body)
+                        .ok()
+                        .and_then(|targets| {
+                            targets
+                                .as_array()
+                                .and_then(|items| items.first())
+                                .and_then(|target| target["webSocketDebuggerUrl"].as_str())
+                                .map(str::to_owned)
+                        });
+                    if let Some(url) = url {
+                        let (socket, _) = connect(&url).context("open DevTools websocket")?;
+                        return Ok(Self {
+                            socket,
+                            next_id: 1,
+                            queued_events: Vec::new(),
+                        });
+                    }
+                    "DevTools listed no debuggable page".to_owned()
+                }
+                Err(error) => error.to_string(),
+            };
+            if Instant::now() >= deadline {
+                bail!(
+                    "Chromium did not open its DevTools endpoint within 12 seconds: {}",
+                    last_error
+                );
+            }
+            thread::sleep(Duration::from_millis(80));
+        }
+    }
+
+    fn call(&mut self, method: &str, params: Value) -> Result<Value> {
+        let id = self.next_id;
+        self.next_id += 1;
+        self.socket.send(Message::Text(
+            json!({ "id": id, "method": method, "params": params }).to_string(),
+        ))?;
+        loop {
+            let value = self.read_value()?;
+            if value["id"].as_u64() == Some(id) {
+                if let Some(error) = value.get("error") {
+                    bail!(
+                        "Chromium {method} failed: {}",
+                        error["message"]
+                            .as_str()
+                            .unwrap_or("unknown protocol error")
+                    );
+                }
+                return Ok(value["result"].clone());
+            }
+            self.queued_events.push(value);
+        }
+    }
+
+    fn navigate(&mut self, url: &str) -> Result<()> {
+        let result = self.call("Page.navigate", json!({ "url": url }))?;
+        if let Some(error) = result["errorText"].as_str() {
+            bail!("could not load {url}: {error}");
+        }
+        let deadline = Instant::now() + Duration::from_secs(20);
+        loop {
+            let state = self.evaluate("document.readyState")?;
+            if matches!(state.as_str(), Some("interactive") | Some("complete")) {
+                return Ok(());
+            }
+            if Instant::now() >= deadline {
+                bail!("timed out loading {url}");
+            }
+            thread::sleep(Duration::from_millis(40));
+        }
+    }
+
+    fn evaluate(&mut self, expression: &str) -> Result<Value> {
+        let result = self.call(
+            "Runtime.evaluate",
+            json!({
+                "expression": expression,
+                "returnByValue": true,
+                "awaitPromise": true
+            }),
+        )?;
+        if let Some(details) = result.get("exceptionDetails") {
+            bail!(
+                "page expression failed: {}",
+                details["text"].as_str().unwrap_or("unknown exception")
+            );
+        }
+        Ok(result["result"]["value"].clone())
+    }
+
+    fn press(&mut self, key: &str) -> Result<()> {
+        let (key, code, key_code, modifiers) = match key {
+            "Shift+Tab" => ("Tab", "Tab", 9, 8),
+            "Tab" => ("Tab", "Tab", 9, 0),
+            "Enter" => ("Enter", "Enter", 13, 0),
+            "Space" => (" ", "Space", 32, 0),
+            "ArrowUp" => ("ArrowUp", "ArrowUp", 38, 0),
+            "ArrowDown" => ("ArrowDown", "ArrowDown", 40, 0),
+            "ArrowLeft" => ("ArrowLeft", "ArrowLeft", 37, 0),
+            "ArrowRight" => ("ArrowRight", "ArrowRight", 39, 0),
+            "Escape" => ("Escape", "Escape", 27, 0),
+            "Home" => ("Home", "Home", 36, 0),
+            "End" => ("End", "End", 35, 0),
+            _ => bail!("unsupported key {key:?}"),
+        };
+        let mut down = json!({ "key": key, "code": code, "windowsVirtualKeyCode": key_code, "nativeVirtualKeyCode": key_code, "modifiers": modifiers });
+        down["type"] = Value::String("keyDown".into());
+        let mut up = down.clone();
+        up["type"] = Value::String("keyUp".into());
+        self.call("Input.dispatchKeyEvent", down)?;
+        self.call("Input.dispatchKeyEvent", up)?;
+        Ok(())
+    }
+
+    fn screenshot(&mut self) -> Result<Vec<u8>> {
+        let result = self.call(
+            "Page.captureScreenshot",
+            json!({ "format": "png", "fromSurface": true }),
+        )?;
+        let data = result["data"]
+            .as_str()
+            .context("Chromium did not return a screenshot")?;
+        base64::engine::general_purpose::STANDARD
+            .decode(data)
+            .context("decode screenshot")
+    }
+
+    fn next_event(&mut self, timeout: Duration) -> Result<Option<Value>> {
+        if !self.queued_events.is_empty() {
+            return Ok(Some(self.queued_events.remove(0)));
+        }
+        if let MaybeTlsStream::Plain(stream) = self.socket.get_mut() {
+            stream.set_read_timeout(Some(timeout))?;
+        }
+        let result = match self.read_value() {
+            Ok(value) => Ok(Some(value)),
+            Err(error) if error.downcast_ref::<WebSocketError>().is_some_and(|websocket| matches!(websocket, WebSocketError::Io(io) if matches!(io.kind(), std::io::ErrorKind::TimedOut | std::io::ErrorKind::WouldBlock))) => Ok(None),
+            Err(error) => Err(error),
+        };
+        if let MaybeTlsStream::Plain(stream) = self.socket.get_mut() {
+            stream.set_read_timeout(None)?;
+        }
+        result
+    }
+
+    fn read_value(&mut self) -> Result<Value> {
+        loop {
+            match self.socket.read()? {
+                Message::Text(text) => {
+                    return serde_json::from_str(&text).context("decode DevTools message");
+                }
+                Message::Binary(bytes) => {
+                    return serde_json::from_slice(&bytes).context("decode DevTools message");
+                }
+                Message::Ping(payload) => self.socket.send(Message::Pong(payload))?,
+                Message::Close(_) => bail!("Chromium closed its DevTools connection"),
+                _ => {}
+            }
+        }
+    }
+}
+
+fn http_request(port: u16, method: &str, path: &str) -> Result<Vec<u8>> {
+    let mut stream = TcpStream::connect(("127.0.0.1", port))?;
+    stream.set_read_timeout(Some(Duration::from_secs(2)))?;
+    write!(
+        stream,
+        "{method} {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n"
+    )?;
+    let mut response = Vec::new();
+    let mut buffer = [0_u8; 8192];
+    let (boundary, content_length) = loop {
+        let count = stream.read(&mut buffer)?;
+        if count == 0 {
+            bail!("DevTools closed an incomplete HTTP response");
+        }
+        response.extend_from_slice(&buffer[..count]);
+        if let Some(boundary) = response.windows(4).position(|window| window == b"\r\n\r\n") {
+            let head = std::str::from_utf8(&response[..boundary])?;
+            let content_length = head
+                .lines()
+                .find_map(|line| {
+                    let (name, value) = line.split_once(':')?;
+                    name.eq_ignore_ascii_case("content-length")
+                        .then_some(value.trim())
+                })
+                .context("DevTools response has no content length")?
+                .parse::<usize>()?;
+            break (boundary, content_length);
+        }
+    };
+    while response.len() < boundary + 4 + content_length {
+        let count = stream.read(&mut buffer)?;
+        if count == 0 {
+            bail!("DevTools closed an incomplete HTTP response");
+        }
+        response.extend_from_slice(&buffer[..count]);
+    }
+    let head = std::str::from_utf8(&response[..boundary])?;
+    if !head.starts_with("HTTP/1.1 200") {
+        bail!(
+            "DevTools endpoint returned {}",
+            head.lines().next().unwrap_or("an invalid response")
+        );
+    }
+    Ok(response[(boundary + 4)..].to_vec())
 }
 
 #[derive(Deserialize)]
