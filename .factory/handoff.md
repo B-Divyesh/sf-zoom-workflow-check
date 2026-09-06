@@ -1,4 +1,18 @@
-# Zoom Workflow Check — repair handoff
+# Zoom Workflow Check — handoff
+
+## Independent verification 2
+
+**FAIL** on 6 September 2026 for implementation
+`1105c80f8411f32757dd801ee88ce73f46918863`, reviewed from documentation base
+`4a2dae09421c771bd992bdaa9a118afc1b207090`.
+
+All six declared claim commands, clean gates, package verification, and two
+fresh consumer installs passed. The live build matches the implementation,
+and the core CLI/demo repair works. Acceptance remains blocked by 4 findings
+and 9 public claims without complete claim-contract coverage. The live home
+also has a serious phone-width Axe finding on its horizontally scrollable
+command block. See [verification-2.md](verification-2.md) for commands,
+evidence, severities, and required next work.
 
 ## Release result
 
