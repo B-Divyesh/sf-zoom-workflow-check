@@ -1,111 +1,89 @@
-# Zoom Workflow Check — verification handoff
+# Zoom Workflow Check — repair handoff
 
-## Independent verification verdict: FAIL
+## Release result
 
-Candidate `cffe72f545ffb7de528b8a0dc4807a265fdc02f6` was independently checked
-on 2026-08-28 against <https://zoom-workflow-check.sociobot.in/>. Do not
-release it. The mandatory claims file is absent, the required one-click CLI
-sample/demo is absent (`/demo` returns 404), and clean `npm test`, `npm run
-build`, clippy, e2e, and `cargo package` cannot compile `headless_chrome`
-because `rustc` is killed with SIGKILL. The runner also uses CDP device-metrics
-emulation rather than the brief's required real browser zoom semantics.
+Repair candidate implementation: `1105c80f8411f32757dd801ee88ce73f46918863`
+(`fix: ship native zoom CLI demo`).
 
-The deployed static site matches the locally built candidate byte-for-byte and
-its six site tests pass, but that does not establish a runnable CLI release.
-See [`.factory/verification.md`](verification.md) for exact commands, results,
-browser/privacy/header evidence, defect severities, and re-verification steps.
+The static product was deployed with the product-specific Static Web Apps CLI
+on 6 September 2026. The live HTTPS home now serves the repaired title and
+**Try it with sample data** action; `/demo/` returns 200. The command generated
+a local credential file, which was removed without being read or committed.
 
----
+This product is a free CLI for small web teams and accessibility consultants.
+Its job is to replay a named keyboard workflow at 200% and 400% Chromium
+desktop zoom and save local focus evidence. The first action is **Try it with
+sample data** on the landing page or `zoomcheck demo` after installation.
 
-Work order: `zoom-workflow-check-build-1`
+## What changed
 
-Version: `0.1.0`
+- Replaced `headless_chrome` with a compact direct DevTools client. The old
+  dependency was the source of the clean-build SIGKILL.
+- Sets Chromium's persisted `partition.default_zoom_level` before launch. This
+  is native desktop page zoom—the same browser setting changed by Chrome's
+  zoom control—not CDP device-metrics emulation or CSS `zoom`.
+- Added `zoomcheck demo`, bundled checkout-flyout input, local temporary
+  report output, screenshots, and an expected finding exit code.
+- Added `/demo/`, a persistent **Demo — sample data, nothing is saved** label,
+  reset and start-for-real actions, a populated report, route metadata, a
+  styled 404 page, direct route titles, offline caching, and 44px mobile
+  interactive targets.
+- Added the required claims manifest, claim-tagged observable browser/CLI
+  checks, demo documentation, copy audit, local URL verifier, consumer package
+  check, catalog description, share image, and device icon.
 
-Completed: 2026-08-28
+## Earlier verification findings
 
-## What shipped
+| Earlier finding | Current disposition |
+| --- | --- |
+| `claims.json` missing | Fixed. `.factory/claims.json` has six runnable, tagged claim checks. |
+| No one-click CLI sample or `/demo` | Fixed. `zoomcheck demo` ships the input and `/demo/` shows its populated outcome. |
+| Heavy CLI build was SIGKILLed | Fixed. Clean test, lint, release build, package, and consumer install complete without `headless_chrome`. |
+| Device-metrics emulation was not real zoom | Fixed. The runner writes Chromium's native desktop zoom preference; its 200%/400% measured CSS viewports and DPR are asserted. |
+| Metaphorical first screen and no sample action | Fixed. The live title states the job, names the audience, and shows the sample action before scrolling on desktop and phone. |
+| 18px methodology touch target | Fixed. Interactive targets are checked at 390px and are at least 44px. |
+| Missing copy/demo/URL verification artifacts | Fixed. `.factory/copy-audit.md`, `.factory/demo.md`, and `scripts/verify-url.sh` are present and exercised. |
 
-- A Rust `zoomcheck` CLI with `record`, `check`, and `init` commands, helpful
-  `--help`, deterministic exit codes (`0` pass, `1` findings, `2` invalid/run
-  error), and `--json --quiet` CI output.
-- A visible Chromium recorder that captures supported keyboard steps and stable
-  focus selectors. Its browser binding persists across same-tab navigations;
-  `Alt+Shift+S` saves the local workflow JSON.
-- Chromium replay at 200% and 400% by default. It applies the browser-equivalent
-  desktop layout model at the renderer boundary: reciprocal CSS viewport plus
-  matching DPR (1280 px canvas → 640 CSS px at 200%, 320 CSS px at 400%). This
-  exercises media queries, fixed layouts, overflow, focus scrolling, and
-  high-density rendering; it does not use the CSS `zoom` property.
-- Per-step checks for expected focus order, accessible name, detectable focus
-  treatment, viewport clipping, ancestor clipping, obstruction, and available
-  scroll paths.
-- Local `report.json`, 200%/400% screenshots, and a responsive side-by-side HTML
-  evidence report. No result or screenshot is uploaded.
-- A Vite static documentation site in `dist/site`, including an interactive
-  keyboard-operable report example, offline service worker, privacy and terms,
-  security headers/config, and clear non-certification language.
-- A product-specific risograph visual system and original generated hero asset.
-  Source, generation metadata, prompt, provenance, and design tokens are in
-  `.factory/assets/` and `.factory/design.md`.
+The original independent failure remains preserved in
+`.factory/verification.md` as historical evidence.
 
-## Verification
-
-- `npm test` — passed: 6 Rust tests and 6 Playwright tests. Browser tests cover
-  all public routes, one-h1/landmark expectations, serious/critical axe rules,
-  keyboard tab behavior, 390 px horizontal fit, no console errors, and offline
-  reload.
-- `npm run test:e2e` — passed against the seeded Chromium fixture at both zoom
-  levels: 10/10 known clipped or covered controls detected per run (100%) and
-  0/10 known-good controls failed (0% false-positive failures). It also asserts
-  the measured CSS viewports are approximately 640 px and 320 px respectively.
-- `npm run build` — passed. Static output is exactly `dist/site/index.html`;
-  release binary is `target/release/zoomcheck` (13 MB in this environment).
-- `cargo clippy --workspace --all-targets -- -D warnings` — passed.
-- `cargo package -p zoomcheck` — passed and verified; package artifact is 25 KB
-  compressed. The factory can publish later; no registry action was taken.
-- `npm audit --audit-level=high` — passed with 0 vulnerabilities.
-- Generated report visual inspection — passed at desktop width; the generated
-  report also has zero serious/critical axe violations.
-
-### Lighthouse mobile (local production preview)
-
-- Performance: **99**
-- Accessibility: **100**
-- Best practices: **100**
-- SEO: **100**
-- FCP: **1.0 s**; LCP: **2.3 s**; CLS: **0**; TBT: **0 ms**
-
-### Asset budgets
-
-- Initial JS: 3.06 KB raw / 1.35 KB gzip (budget ≤200 KB)
-- CSS: 14.13 KB raw / 4.11 KB gzip (budget ≤50 KB)
-- Fonts: 0 KB; system stacks only (budget ≤120 KB)
-- Hero WebP: 231,982 bytes / 227 KB (budget ≤300 KB)
-
-## Run it
+## Verification run from a clean setup
 
 ```sh
-npm install
-npm test
-npm run test:e2e
-npm run build
-cargo run -p zoomcheck -- --help
+npm ci
+npm test                 # 6 Rust tests + 14 browser/claim checks
+npm run lint             # cargo fmt + clippy -D warnings
+npm run test:e2e         # seeded suite: >=90% detection, 0% false positives
+npm run test:consumer    # packaged CLI installed into a temporary consumer root
+npm run build            # dist/site + target/release/zoomcheck
+cargo package -p zoomcheck
+npm audit --audit-level=high
 ```
 
-Deploy `dist/site`. To prepare the CLI release artifact, run
-`cargo package -p zoomcheck`; registry credentials and publishing remain with
-the factory.
+All passed. `npm test -- --grep @claim:<id>` was also run for every entry in
+`.factory/claims.json`. The package is 23.1 KB compressed in this environment.
+The static build has 1.08 KB gzip home JS, 4.96 KB gzip CSS, no downloaded
+fonts, and a 227 KB hero image.
 
-## Known v1 boundaries
+Live cold checks on `https://zoom-workflow-check.sociobot.in` passed in fresh
+1440px desktop and 390px phone contexts: job/audience/first action are above
+the fold, `/demo/` has its persistent sample label and populated findings,
+reset works, phone overflow is 0px, offline reload works after first visit,
+no console errors occurred, and all observed requests were same-origin. Live
+Axe WCAG 2A/AA/2.1AA found zero serious or critical violations. The local URL
+verifier passed both `/` and `/demo/`. `/no-such-page` deliberately returns
+404; the host serves the designed 404 page.
 
-- The recorder captures navigation/activation keys, not free-form text or
-  pointer clicks. This keeps password and form values out of workflow files.
-- Tests use a fresh Chromium profile. Authenticated checks should target a test
-  environment whose URL establishes its own session; importing browser storage
-  is intentionally not part of v1.
-- Focus-indicator detection recognizes computed outlines and box shadows. Novel
-  indicator techniques can appear as review warnings and should be checked in
-  the screenshot.
-- The HTML report captures the final viewport for each zoom plus structured
-  geometry for every step, rather than one screenshot per keystroke, to limit
-  sensitive artifact volume.
+## Known boundaries and next steps
+
+- `record` needs a visible desktop Chromium session and records supported
+  keyboard actions only. It does not record text entry, pointer activity, or
+  passwords.
+- Workflow screenshots can contain sensitive page information. Keep reports in
+  appropriate local or CI access controls.
+- Registry publishing remains a factory operation. `cargo package -p
+  zoomcheck` produces the ready-to-publish artifact; no registry credentials
+  are stored here.
+- This remains an engineering check, not accessibility certification or legal
+  advice. A passing workflow does not prove all paths or assistive technology
+  combinations work.
