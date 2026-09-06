@@ -1,6 +1,7 @@
 # Repair verification — PASS
 
 **Implementation SHA:** `1105c80f8411f32757dd801ee88ce73f46918863`
+**Documentation/report SHA:** `7c98b698c4c0d5dd75998d33e256c4b3cd056cfd`
 **Implementation date:** 2026-09-06
 **Live URL:** <https://zoom-workflow-check.sociobot.in/>
 

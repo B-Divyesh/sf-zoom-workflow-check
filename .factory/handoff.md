@@ -5,6 +5,9 @@
 Repair candidate implementation: `1105c80f8411f32757dd801ee88ce73f46918863`
 (`fix: ship native zoom CLI demo`).
 
+Repair documentation/report: `7c98b698c4c0d5dd75998d33e256c4b3cd056cfd`
+(`docs: record repair verification`).
+
 The static product was deployed with the product-specific Static Web Apps CLI
 on 6 September 2026. The live HTTPS home now serves the repaired title and
 **Try it with sample data** action; `/demo/` returns 200. The command generated
